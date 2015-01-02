@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>entry</key>
+	<dict>
+		<key>cell</key>
+		<string>PSLinkCell</string>
+		<key>icon</key>
+		<string>NotificationKiller.png</string>
+		<key>label</key>
+		<string>Notification Killer</string>
+	</dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.autopear.notificationkiller.preferenceschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.autopear.notificationkiller</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>label</key>
+			<string>Enabled</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.autopear.notificationkiller.preferenceschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.autopear.notificationkiller</string>
+			<key>key</key>
+			<string>badge</string>
+			<key>label</key>
+			<string>Remove Icon Badge</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.autopear.notificationkiller.preferenceschanged</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.autopear.notificationkiller</string>
+			<key>key</key>
+			<string>confirm</string>
+			<key>label</key>
+			<string>Require Confirmation</string>
+		</dict>
+		<dict>
+			<key>ALChangeNotification</key>
+			<string>com.autopear.notificationkiller.preferenceschanged</string>
+			<key>ALSectionDescriptors</key>
+			<array>
+				<dict>
+					<key>cell-class-name</key>
+					<string>ALSwitchCell</string>
+					<key>icon-size</key>
+					<string>29</string>
+					<key>suppress-hidden-apps</key>
+					<true/>
+				</dict>
+			</array>
+			<key>ALSettingsDefaultValue</key>
+			<false/>
+			<key>ALSettingsKeyPrefix</key>
+			<string>NK-</string>
+			<key>ALSettingsPath</key>
+			<string>/var/mobile/Library/Preferences/com.autopear.notificationkiller.plist</string>
+			<key>bundle</key>
+			<string>AppList</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>isController</key>
+			<true/>
+			<key>label</key>
+			<string>White List</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Copyright © 2015 Merlin Mao</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Notification Killer</string>
+</dict>
+</plist>
