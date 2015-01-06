@@ -6,6 +6,7 @@ include theos/makefiles/common.mk
 TWEAK_NAME = NotificationKiller
 NotificationKiller_FILES = Tweak.xm
 NotificationKiller_FRAMEWORKS = UIKit
+NotificationKiller_LDFLAGS = -weak_library theos/lib/libactivator.dylib
 
 VERSION.INC_BUILD_NUMBER = 1
 

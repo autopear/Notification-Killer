@@ -1,13 +1,13 @@
 Package: com.autopear.notificationkiller
-Depends: firmware (>= 7.0), preferenceloader (>= 2.2.2), applist (>= 1.5.9)
-Name: Notification Killer
-Version: 1.0
-Architecture: iphoneos-arm
-Description: Long press to clear all notifications!
+Section: Tweaks
 Maintainer: BigBoss <bigboss@thebigboss.org>
+Architecture: iphoneos-arm
+Version: 1.1
+Depends: firmware (>= 7.0), preferenceloader (>= 2.2.2), applist (>= 1.5.9)
+Description: Long press to clear all notifications!
+Name: Notification Killer
 Author: Merlin
 Sponsor: thebigboss.org <http://thebigboss.org>
-Section: Tweaks
 dev: lonelystars
 Tag: purpose::extension, role::enduser
 Icon: file:///Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@2x.png

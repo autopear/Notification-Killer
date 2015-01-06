@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <CaptainHook/CaptainHook.h>
+#import <libactivator/libactivator.h>
 
 #define PreferencesName "com.autopear.notificationkiller"
 #define PreferencesChangedNotification "com.autopear.notificationkiller.preferenceschanged"
@@ -21,11 +22,14 @@
 @interface SBNotificationCenterViewController {
     SBBulletinObserverViewController* _allModeViewController;
 }
+-(void)hostWillDismiss;
 @end
 
 @interface SBNotificationCenterController
 @property(readonly, retain, nonatomic) SBNotificationCenterViewController* viewController;
 +(id)sharedInstance;
+-(void)clearAllNotifications;
+-(void)clearAllNotificationsInternal;
 @end
 
 @interface SBIcon
@@ -51,10 +55,10 @@ static BOOL tweakEnabled = YES;
 static NSArray *whiteList = nil;
 static BOOL removeBadge = YES;
 static BOOL needConfirm = YES;
-static SBBulletinObserverViewController *ncAllConrtoller = nil;
 static SBIconModel *iconModel = nil;
 static NotificationKillerAlert *alertDelegate = nil;
-static NSString *alertTitle = nil, *alertMessage = nil, *alertOK = nil, *alertCancel = nil;
+static NSString *tweakName = nil, *tweakDesc = nil, *alertMessage = nil, *alertOK = nil, *alertCancel = nil;
+static UIAlertView *alertView = nil;
 
 static BOOL readPreferenceBOOL(NSString *key, BOOL defaultValue) {
     return !CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(PreferencesName)) ? defaultValue : [(id)CFBridgingRelease(CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(PreferencesName))) boolValue];
@@ -91,19 +95,38 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
     LoadPreferences();
 }
 
-static void clearAllSections() {
-    if (!ncAllConrtoller)
-        return;
+@implementation NotificationKillerAlert
 
-    NSMutableArray *_visibleSectionIDs = CHIvar(ncAllConrtoller, _visibleSectionIDs, NSMutableArray *);
+-(void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alert == alertView) {
+        [alertView dismissAnimated:YES];
+        [alertView release];
+        alertView = nil;
+        if (buttonIndex == 1) {
+            SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+            if (nc)
+                [nc clearAllNotifications];
+        }
+    }
+}
+
+@end
+
+%hook SBNotificationCenterController
+
+%new
+-(void)clearAllNotifications {
+    SBBulletinObserverViewController *allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
+
+    NSMutableArray *_visibleSectionIDs = CHIvar(allCtrl, _visibleSectionIDs, NSMutableArray *);
     NSArray *allSections = [NSArray arrayWithArray:_visibleSectionIDs];
     for (NSString *identifier in allSections) {
         if (whiteList && [whiteList containsObject:identifier])
             continue;
 
-        id sectionInfo = [ncAllConrtoller sectionWithIdentifier:identifier];
+        id sectionInfo = [allCtrl sectionWithIdentifier:identifier];
         if (sectionInfo)
-            [ncAllConrtoller clearSection:sectionInfo];
+            [allCtrl clearSection:sectionInfo];
 
         if (removeBadge) {
             if (!iconModel)
@@ -122,16 +145,29 @@ static void clearAllSections() {
     }
 }
 
-@implementation NotificationKillerAlert
+%new
+-(void)clearAllNotificationsInternal {
+    SBBulletinObserverViewController *allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
 
--(void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    [alertView dismissAnimated:YES];
-    [alertView release];
-    if (buttonIndex == 1)
-        clearAllSections();
+    NSMutableArray *_visibleSectionIDs = CHIvar(allCtrl, _visibleSectionIDs, NSMutableArray *);
+    if (_visibleSectionIDs && [_visibleSectionIDs count] > 0) {
+        if (needConfirm) {
+            if (alertView) {
+                [alertView dismissAnimated:NO];
+                [alertView release];
+            }
+            alertView = [[UIAlertView alloc] initWithTitle:tweakName
+                                                   message:alertMessage
+                                                  delegate:alertDelegate
+                                         cancelButtonTitle:alertCancel
+                                         otherButtonTitles:alertOK, nil];
+            [alertView show];
+        } else
+            [self clearAllNotifications];
+    }
 }
 
-@end
+%end
 
 %hook SBModeControlManager
 
@@ -139,44 +175,101 @@ static void clearAllSections() {
     %orig(title, index, animated);
     UIView *control = [self _segmentedControlForUse:index];
     if (control) {
-        UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)];
+        UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleNKLongPress:)];
         [control addGestureRecognizer:longPress];
         [longPress release];
     }
 }
 
 %new
--(void)handleLongPress:(UIGestureRecognizer *)sender {
+-(void)handleNKLongPress:(UIGestureRecognizer *)sender {
     if (tweakEnabled && sender.state == UIGestureRecognizerStateEnded) {
-        if (!ncAllConrtoller) {
-            SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
-            SBNotificationCenterViewController *ncvc = nc.viewController;
-            ncAllConrtoller = (SBBulletinObserverViewController *)CHIvar(ncvc, _allModeViewController, SBBulletinObserverViewController *);
-        }
-        if (ncAllConrtoller) {
-            NSMutableArray *_visibleSectionIDs = CHIvar(ncAllConrtoller, _visibleSectionIDs, NSMutableArray *);
-            if (_visibleSectionIDs && [_visibleSectionIDs count] > 0) {
-                if (needConfirm) {
-                    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:alertTitle
-                                                                        message:alertMessage
-                                                                       delegate:alertDelegate
-                                                              cancelButtonTitle:alertCancel
-                                                              otherButtonTitles:alertOK, nil];
-                    [alertView show];
-                } else
-                    clearAllSections();
-            }
-        }
+        SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+        if (nc)
+            [nc clearAllNotificationsInternal];
     }
 }
 
 %end
 
+%hook SBNotificationCenterViewController
+
+-(void)hostWillDismiss {
+    if (alertView) {
+        [alertView dismissAnimated:YES];
+        [alertView release];
+        alertView = nil;
+    }
+
+    %orig;
+}
+
+%end
+
+@interface NotificationKillerListener : NSObject <LAListener> {
+    UIImage *_icon;
+}
+@end
+
+@implementation NotificationKillerListener
+
+- (id)init {
+    if ((self = [super init])) {
+    }
+    return self;
+}
+
+-(void)dealloc {
+    [_icon release];
+    [super dealloc];
+}
+
+- (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
+    SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+    if (nc)
+        [nc clearAllNotificationsInternal];
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
+    return tweakName;
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName {
+    return tweakDesc;
+}
+
+- (UIImage *)activator:(LAActivator *)activator requiresIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+    if (!_icon) {
+        if (scale == 3.0f)
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@3x.png"];
+        else if (scale == 2.0f)
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@2x.png"];
+        else
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller.png"];
+    }
+    return _icon;
+}
+
+- (UIImage *)activator:(LAActivator *)activator requiresSmallIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+    if (!_icon) {
+        if (scale == 3.0f)
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@3x.png"];
+        else if (scale == 2.0f)
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@2x.png"];
+        else
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller.png"];
+    }
+    return _icon;
+}
+
+@end
+
 %ctor {
     @autoreleasepool {
         NSBundle *localizedBundle = [[NSBundle alloc] initWithPath:@"/Library/PreferenceLoader/Preferences/NotificationKiller"];
 
-        alertTitle = [NSLocalizedStringFromTableInBundle(@"Notification Killer", @"NotificationKiller", localizedBundle, @"Notification Killer") retain];
+        tweakName = [NSLocalizedStringFromTableInBundle(@"Notification Killer", @"NotificationKiller", localizedBundle, @"Notification Killer") retain];
+        tweakDesc = [NSLocalizedStringFromTableInBundle(@"Clear all notifications!", @"NotificationKiller", localizedBundle, @"Clear all notifications!") retain];
         alertMessage = [NSLocalizedStringFromTableInBundle(@"Would you like to clear all notifications?", @"NotificationKiller", localizedBundle, @"Would you like to clear all notifications?") retain];
         alertCancel = [NSLocalizedStringFromTableInBundle(@"Cancel", @"NotificationKiller", localizedBundle, @"Cancel") retain];
         alertOK = [NSLocalizedStringFromTableInBundle(@"OK", @"NotificationKiller", localizedBundle, @"OK") retain];
@@ -188,5 +281,11 @@ static void clearAllSections() {
         LoadPreferences();
 
         alertDelegate = [[NotificationKillerAlert alloc] init];
+
+        if ([[NSFileManager defaultManager] fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/Activator.dylib"]) {
+            NotificationKillerListener *listener = [[NotificationKillerListener alloc] init];
+            [[LAActivator sharedInstance] registerListener:listener forName:@"com.autopear.notificationkiller"];
+        }
+
     }
 }
