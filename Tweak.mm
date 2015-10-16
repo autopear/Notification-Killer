@@ -19,8 +19,18 @@
 -(void)clearSection:(id)section;
 @end
 
+@interface SBNotificationsViewController : SBBulletinObserverViewController
+@end
+
+@interface SBNotificationCenterLayoutViewController : UIViewController {
+    SBNotificationsViewController *_notificationsViewController;
+    //SBModeViewController *_modeViewController;
+}
+@end
+
 @interface SBNotificationCenterViewController {
-    SBBulletinObserverViewController* _allModeViewController;
+    SBBulletinObserverViewController* _allModeViewController; //iOS 7 & 8
+    SBNotificationCenterLayoutViewController *_layoutViewController; //iOS 9
 }
 -(void)hostWillDismiss;
 @end
@@ -28,8 +38,8 @@
 @interface SBNotificationCenterController
 @property(readonly, retain, nonatomic) SBNotificationCenterViewController* viewController;
 +(id)sharedInstance;
--(void)clearAllNotifications;
--(void)clearAllNotificationsInternal;
+-(void)clearAllNotifications; //New
+-(void)clearAllNotificationsInternal; //New
 @end
 
 @interface SBIcon
@@ -39,7 +49,7 @@
 
 @interface SBIconModel
 -(SBIcon *)applicationIconForDisplayIdentifier:(NSString *)identifier; //iOS 7
--(SBIcon *)applicationIconForBundleIdentifier:(NSString *)bundleIdentifier; //iOS 8
+-(SBIcon *)applicationIconForBundleIdentifier:(NSString *)bundleIdentifier; //iOS 8 & 9
 @end
 
 @interface SBIconViewMap
@@ -116,7 +126,13 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 %new
 -(void)clearAllNotifications {
-    SBBulletinObserverViewController *allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
+    SBBulletinObserverViewController *allCtrl = nil;
+    if (kCFCoreFoundationVersionNumber < 1240.10) //iOS 7 & 8
+        allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
+    else { //iOS 9
+        SBNotificationCenterLayoutViewController *sbnclvc = (SBNotificationCenterLayoutViewController *)CHIvar(self.viewController, _layoutViewController, SBNotificationCenterLayoutViewController *);
+        allCtrl = (SBBulletinObserverViewController *)CHIvar(sbnclvc, _notificationsViewController, SBBulletinObserverViewController *);
+    }
 
     NSMutableArray *_visibleSectionIDs = CHIvar(allCtrl, _visibleSectionIDs, NSMutableArray *);
     NSArray *allSections = [NSArray arrayWithArray:_visibleSectionIDs];
@@ -147,7 +163,13 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 %new
 -(void)clearAllNotificationsInternal {
-    SBBulletinObserverViewController *allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
+    SBBulletinObserverViewController *allCtrl = nil;
+    if (kCFCoreFoundationVersionNumber < 1240.10) //iOS 7 & 8
+        allCtrl = (SBBulletinObserverViewController *)CHIvar(self.viewController, _allModeViewController, SBBulletinObserverViewController *);
+    else { //iOS 9
+        SBNotificationCenterLayoutViewController *sbnclvc = (SBNotificationCenterLayoutViewController *)CHIvar(self.viewController, _layoutViewController, SBNotificationCenterLayoutViewController *);
+        allCtrl = (SBBulletinObserverViewController *)CHIvar(sbnclvc, _notificationsViewController, SBBulletinObserverViewController *);
+    }
 
     NSMutableArray *_visibleSectionIDs = CHIvar(allCtrl, _visibleSectionIDs, NSMutableArray *);
     if (_visibleSectionIDs && [_visibleSectionIDs count] > 0) {
@@ -286,6 +308,5 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
             NotificationKillerListener *listener = [[NotificationKillerListener alloc] init];
             [[LAActivator sharedInstance] registerListener:listener forName:@"com.autopear.notificationkiller"];
         }
-
     }
 }
