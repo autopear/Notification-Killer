@@ -53,8 +53,13 @@
 @end
 
 @interface SBIconViewMap
-+(SBIconViewMap *)homescreenMap;
++(SBIconViewMap *)homescreenMap; //Deprecated in 9.3
 -(SBIconModel *)iconModel;
+@end
+
+@interface SBIconController : UIViewController
++(id)sharedInstance;
+-(SBIconViewMap *)homescreenIconViewMap; //New in 9.3
 @end
 
 @interface NotificationKillerAlert : NSObject <UIAlertViewDelegate>
@@ -145,8 +150,15 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
             [allCtrl clearSection:sectionInfo];
 
         if (removeBadge) {
-            if (!iconModel)
-                iconModel = (SBIconModel *)[(SBIconViewMap *)[%c(SBIconViewMap) homescreenMap] iconModel];
+            if (!iconModel) {
+                if ([%c(SBIconViewMap) respondsToSelector:@selector(homescreenMap)])
+                    iconModel = (SBIconModel *)[(SBIconViewMap *)[%c(SBIconViewMap) homescreenMap] iconModel];
+                else {
+                    SBIconController *iconCtrl = [%c(SBIconController) sharedInstance];
+                    if ([iconCtrl respondsToSelector:@selector(homescreenIconViewMap)])
+                        iconModel = (SBIconModel *)[(SBIconViewMap *)[iconCtrl homescreenIconViewMap] iconModel];
+                }
+            }
             if (iconModel) {
                 SBIcon *appIcon = nil;
                 if (kCFCoreFoundationVersionNumber < 1140.10)
@@ -205,11 +217,9 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 %new
 -(void)handleNKLongPress:(UIGestureRecognizer *)sender {
-    if (tweakEnabled && sender.state == UIGestureRecognizerStateEnded) {
-        SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
-        if (nc)
-            [nc clearAllNotificationsInternal];
-    }
+    SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+    if (nc)
+        [nc clearAllNotificationsInternal];
 }
 
 %end
