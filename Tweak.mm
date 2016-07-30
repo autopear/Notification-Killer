@@ -71,6 +71,7 @@ static NSArray *whiteList = nil;
 static BOOL removeBadge = YES;
 static BOOL needConfirm = YES;
 static SBIconModel *iconModel = nil;
+static SBNotificationCenterController *notiCenter =  nil;
 static NotificationKillerAlert *alertDelegate = nil;
 static NSString *tweakName = nil, *tweakDesc = nil, *alertMessage = nil, *alertOK = nil, *alertCancel = nil;
 static UIAlertView *alertView = nil;
@@ -82,12 +83,12 @@ static BOOL readPreferenceBOOL(NSString *key, BOOL defaultValue) {
 static void LoadPreferences() {
     NSDictionary *dict = [[NSDictionary alloc] initWithContentsOfFile:PreferencesFilePath];
 
-    if (kCFCoreFoundationVersionNumber >= 1140.10) {
+    if (kCFCoreFoundationVersionNumber >= 1140.10) { //iOS 7
         CFPreferencesAppSynchronize(CFSTR(PreferencesName));
         tweakEnabled = readPreferenceBOOL(@"enabled", YES);
         removeBadge = readPreferenceBOOL(@"badge", YES);
         needConfirm = readPreferenceBOOL(@"confirm", YES);
-    } else {
+    } else { //iOS 8 & 9
         tweakEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
         removeBadge = [dict objectForKey:@"badge"] ? [[dict objectForKey:@"removeBadge"] boolValue] : YES;
         needConfirm = [dict objectForKey:@"confirm"] ? [[dict objectForKey:@"confirm"] boolValue] : YES;
@@ -114,14 +115,15 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 -(void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)buttonIndex {
     if (alert == alertView) {
-        [alertView dismissAnimated:YES];
+        [alertView dismissWithClickedButtonIndex:[alertView cancelButtonIndex] animated:YES];
+        if (buttonIndex == [alertView firstOtherButtonIndex]) {
+            if (!notiCenter)
+                notiCenter = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+            if (notiCenter)
+                [notiCenter clearAllNotifications];
+        }
         [alertView release];
         alertView = nil;
-        if (buttonIndex == 1) {
-            SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
-            if (nc)
-                [nc clearAllNotifications];
-        }
     }
 }
 
@@ -161,9 +163,9 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
             }
             if (iconModel) {
                 SBIcon *appIcon = nil;
-                if (kCFCoreFoundationVersionNumber < 1140.10)
+                if (kCFCoreFoundationVersionNumber < 1140.10) //iOS 7
                     appIcon = [iconModel applicationIconForDisplayIdentifier:identifier];
-                else
+                else //iOS 8 & 9
                     appIcon = [iconModel applicationIconForBundleIdentifier:identifier];
 
                 if (appIcon && [appIcon badgeNumberOrString])
@@ -187,7 +189,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
     if (_visibleSectionIDs && [_visibleSectionIDs count] > 0) {
         if (needConfirm) {
             if (alertView) {
-                [alertView dismissAnimated:NO];
+                [alertView dismissWithClickedButtonIndex:[alertView cancelButtonIndex] animated:YES];
                 [alertView release];
             }
             alertView = [[UIAlertView alloc] initWithTitle:tweakName
@@ -217,9 +219,12 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 %new
 -(void)handleNKLongPress:(UIGestureRecognizer *)sender {
-    SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
-    if (nc)
-        [nc clearAllNotificationsInternal];
+    if (tweakEnabled && sender.state == UIGestureRecognizerStateBegan) {
+        if (!notiCenter)
+            notiCenter = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+            if (notiCenter)
+                [notiCenter clearAllNotificationsInternal];
+    }
 }
 
 %end
@@ -228,7 +233,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 -(void)hostWillDismiss {
     if (alertView) {
-        [alertView dismissAnimated:YES];
+        [alertView dismissWithClickedButtonIndex:[alertView cancelButtonIndex] animated:YES];
         [alertView release];
         alertView = nil;
     }
@@ -257,9 +262,10 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
-    SBNotificationCenterController *nc = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
-    if (nc)
-        [nc clearAllNotificationsInternal];
+    if (!notiCenter)
+        notiCenter = (SBNotificationCenterController *)[%c(SBNotificationCenterController) sharedInstance];
+    if (notiCenter)
+        [notiCenter clearAllNotificationsInternal];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
