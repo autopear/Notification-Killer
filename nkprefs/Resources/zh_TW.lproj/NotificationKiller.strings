@@ -1,7 +1,14 @@
+"About" = "關于";
+"Activation Methods" = "激活方式";
+"Activator" = "Activator";
 "Cancel" = "取消";
 "Clear all notifications!" = "立即清理全部通知！";
+"Donate" = "捐贈";
 "Enabled" = "啟用";
+"Follow on Twitter" = "Twitter 上收聽";
+"Follow on Weibo" = "微博上收聽";
 "Notification Killer" = "通知清理";
+"Notifications of the selected applications will be kept." = "白名單中的應用程式的通知將會被保留。";
 "OK" = "確定";
 "Remove Icon Badge" = "移除圖示角標";
 "Require Confirmation" = "需要確認";

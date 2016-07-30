@@ -2,7 +2,6 @@
 #import <CaptainHook/CaptainHook.h>
 #import <libactivator/libactivator.h>
 
-#define PreferencesName "com.autopear.notificationkiller"
 #define PreferencesChangedNotification "com.autopear.notificationkiller.preferenceschanged"
 #define PreferencesFilePath @"/var/mobile/Library/Preferences/com.autopear.notificationkiller.plist"
 
@@ -76,23 +75,12 @@ static NotificationKillerAlert *alertDelegate = nil;
 static NSString *tweakName = nil, *tweakDesc = nil, *alertMessage = nil, *alertOK = nil, *alertCancel = nil;
 static UIAlertView *alertView = nil;
 
-static BOOL readPreferenceBOOL(NSString *key, BOOL defaultValue) {
-    return !CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(PreferencesName)) ? defaultValue : [(id)CFBridgingRelease(CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(PreferencesName))) boolValue];
-}
-
 static void LoadPreferences() {
     NSDictionary *dict = [[NSDictionary alloc] initWithContentsOfFile:PreferencesFilePath];
 
-    if (kCFCoreFoundationVersionNumber >= 1140.10) { //iOS 7
-        CFPreferencesAppSynchronize(CFSTR(PreferencesName));
-        tweakEnabled = readPreferenceBOOL(@"enabled", YES);
-        removeBadge = readPreferenceBOOL(@"badge", YES);
-        needConfirm = readPreferenceBOOL(@"confirm", YES);
-    } else { //iOS 8 & 9
-        tweakEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
-        removeBadge = [dict objectForKey:@"badge"] ? [[dict objectForKey:@"removeBadge"] boolValue] : YES;
-        needConfirm = [dict objectForKey:@"confirm"] ? [[dict objectForKey:@"confirm"] boolValue] : YES;
-    }
+    tweakEnabled = [dict objectForKey:@"enabled"] ? [[dict objectForKey:@"enabled"] boolValue] : YES;
+    removeBadge = [dict objectForKey:@"badge"] ? [[dict objectForKey:@"badge"] boolValue] : YES;
+    needConfirm = [dict objectForKey:@"confirm"] ? [[dict objectForKey:@"confirm"] boolValue] : YES;
 
     NSMutableArray *list = [NSMutableArray array];
     for (NSString *key in [dict allKeys]) {
@@ -279,11 +267,11 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 - (UIImage *)activator:(LAActivator *)activator requiresIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
     if (!_icon) {
         if (scale == 3.0f)
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@3x.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller@3x.png"];
         else if (scale == 2.0f)
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@2x.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller@2x.png"];
         else
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller.png"];
     }
     return _icon;
 }
@@ -291,11 +279,11 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 - (UIImage *)activator:(LAActivator *)activator requiresSmallIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
     if (!_icon) {
         if (scale == 3.0f)
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@3x.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller@3x.png"];
         else if (scale == 2.0f)
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller@2x.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller@2x.png"];
         else
-            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceLoader/Preferences/NotificationKiller/NotificationKiller.png"];
+            _icon = [[UIImage alloc] initWithContentsOfFile:@"/Library/PreferenceBundles/NKPrefs.bundle/NotificationKiller.png"];
     }
     return _icon;
 }
@@ -304,7 +292,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 %ctor {
     @autoreleasepool {
-        NSBundle *localizedBundle = [[NSBundle alloc] initWithPath:@"/Library/PreferenceLoader/Preferences/NotificationKiller"];
+        NSBundle *localizedBundle = [[NSBundle alloc] initWithPath:@"/Library/PreferenceBundles/NKPrefs.bundle"];
 
         tweakName = [NSLocalizedStringFromTableInBundle(@"Notification Killer", @"NotificationKiller", localizedBundle, @"Notification Killer") retain];
         tweakDesc = [NSLocalizedStringFromTableInBundle(@"Clear all notifications!", @"NotificationKiller", localizedBundle, @"Clear all notifications!") retain];
